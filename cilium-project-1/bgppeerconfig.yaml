@@ -1,0 +1,64 @@
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: cilium-bgp
+spec:
+  nodeSelector:
+    matchLabels:
+      bgp: "jazeker"
+  bgpInstances:
+  - name: "65002"
+    localASN: 65002
+    peers:
+    - name: "mikrotik"
+      peerASN: 65001
+      peerAddress: 192.168.88.1
+      peerConfigRef:
+        name: "cilium-peer"
+---
+apiVersion: cilium.io/v2 
+kind: CiliumBGPPeerConfig
+metadata:
+  name: cilium-peer
+spec:
+  gracefulRestart:
+    enabled: false
+    restartTimeSeconds: 15
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: "bgp"
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
+metadata:
+  name: bgp-advertisements
+  labels:
+    advertise: bgp
+spec:
+  advertisements:
+    - advertisementType: "Service"
+      service:
+        addresses:
+          - LoadBalancerIP
+         # - ClusterIP
+      selector:
+        matchLabels:
+          bgp: "jazeker"
+      attributes:
+        communities:
+          standard: [ "65000:200" ]
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "lb-adressen"
+spec:
+  serviceSelector:
+    matchLabels:
+      bgp: "jazeker" 
+  allowFirstLastIPs: "No"
+  blocks:
+  - cidr: "172.30.0.0/24"
